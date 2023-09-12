@@ -14,12 +14,12 @@ from .oauth import BaseOAuth1
 
 
 class OpenStreetMapOAuth(BaseOAuth1):
-    """OpenStreetMap OAuth authentication backend"""
+    """OpenStreetMap OAuth authentication backend, modified to OpenHistoricalMap"""
 
     name = "openstreetmap"
-    AUTHORIZATION_URL = "https://www.openstreetmap.org/oauth/authorize"
-    REQUEST_TOKEN_URL = "https://www.openstreetmap.org/oauth/request_token"
-    ACCESS_TOKEN_URL = "https://www.openstreetmap.org/oauth/access_token"
+    AUTHORIZATION_URL = "https://www.openhistoricalmap.org/oauth/authorize"
+    REQUEST_TOKEN_URL = "https://www.openhistoricalmap.org/oauth/request_token"
+    ACCESS_TOKEN_URL = "https://www.openhistoricalmap.org/oauth/access_token"
     EXTRA_DATA = [
         ("id", "id"),
         ("avatar", "avatar"),
@@ -27,7 +27,7 @@ class OpenStreetMapOAuth(BaseOAuth1):
     ]
 
     def get_user_details(self, response):
-        """Return user details from OpenStreetMap account"""
+        """Return user details from OpenHistoricalMap account"""
         return {
             "username": response["username"],
             "email": "",
@@ -39,7 +39,7 @@ class OpenStreetMapOAuth(BaseOAuth1):
     def user_data(self, access_token, *args, **kwargs):
         """Return user data provided"""
         response = self.oauth_request(
-            access_token, "https://api.openstreetmap.org/api/0.6/user/details"
+            access_token, "https://api.openhistoricalmap.org/api/0.6/user/details"
         )
         try:
             dom = minidom.parseString(response.content)
