@@ -39,7 +39,7 @@ class OpenStreetMapOAuth(BaseOAuth1):
     def user_data(self, access_token, *args, **kwargs):
         """Return user data provided"""
         response = self.oauth_request(
-            access_token, "https://api.openhistoricalmap.org/api/0.6/user/details"
+            access_token, "https://www.openhistoricalmap.org/api/0.6/user/details"
         )
         try:
             dom = minidom.parseString(response.content)
