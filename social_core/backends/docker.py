@@ -2,6 +2,7 @@
 Docker Hub OAuth2 backend, docs at:
     https://python-social-auth.readthedocs.io/en/latest/backends/docker.html
 """
+
 from .oauth import BaseOAuth2
 
 
@@ -41,6 +42,6 @@ class DockerOAuth2(BaseOAuth2):
         """Grab user profile information from Docker Hub."""
         username = kwargs["response"]["username"]
         return self.get_json(
-            "https://hub.docker.com/api/v1.1/users/%s/" % username,
-            headers={"Authorization": "Bearer %s" % access_token},
+            f"https://hub.docker.com/api/v1.1/users/{username}/",
+            headers={"Authorization": f"Bearer {access_token}"},
         )

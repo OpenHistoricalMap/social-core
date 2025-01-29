@@ -4,6 +4,7 @@ Qiita OAuth2 backend, docs at:
     http://qiita.com/api/v2/docs#get-apiv2oauthauthorize
     https://qiita.com/api/v2/docs#get-apiv2authenticated_user
 """
+
 import json
 
 from social_core.exceptions import AuthException
@@ -42,7 +43,9 @@ class QiitaOAuth2(BaseOAuth2):
         ("image_monthly_upload_remaining", "image_monthly_upload_remaining"),
     ]
 
-    def auth_complete_params(self, state=None):
+    # TODO: I am pretty sure this method returns the wrong type; it should
+    # return a dict
+    def auth_complete_params(self, state=None):  # type: ignore[reportIncompatibleMethodOverride]
         data = super().auth_complete_params(state)
         if "grant_type" in data:
             del data["grant_type"]
@@ -82,5 +85,4 @@ class QiitaOAuth2(BaseOAuth2):
 
         if user_id is not None:
             return str(user_id)
-        else:
-            raise AuthException("failed to get user id")
+        raise AuthException("failed to get user id")

@@ -4,6 +4,7 @@ Udata related backends.
 Docs at:
     https://python-social-auth.readthedocs.io/en/latest/backends/udata.html
 """
+
 from .oauth import BaseOAuth2
 
 
@@ -14,6 +15,7 @@ class UdataBaseOAuth2(BaseOAuth2):
     REDIRECT_STATE = False
     DEFAULT_SCOPE = ["default"]
     ACCESS_TOKEN_METHOD = "POST"
+    USER_DATA_URL = None
 
     def get_user_details(self, response):
         """Return user details from Udata account."""

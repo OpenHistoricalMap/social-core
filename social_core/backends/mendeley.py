@@ -2,6 +2,7 @@
 Mendeley OAuth1 backend, docs at:
     https://python-social-auth.readthedocs.io/en/latest/backends/mendeley.html
 """
+
 from .oauth import BaseOAuth1, BaseOAuth2
 
 
@@ -49,7 +50,8 @@ class MendeleyOAuth2(MendeleyMixin, BaseOAuth2):
     ACCESS_TOKEN_METHOD = "POST"
     DEFAULT_SCOPE = ["all"]
     REDIRECT_STATE = False
-    EXTRA_DATA = MendeleyMixin.EXTRA_DATA + [
+    EXTRA_DATA = [
+        *MendeleyMixin.EXTRA_DATA,
         ("refresh_token", "refresh_token"),
         ("expires_in", "expires_in"),
         ("token_type", "token_type"),
