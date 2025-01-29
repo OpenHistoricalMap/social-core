@@ -16,8 +16,8 @@ class OpenStreetMapOAuth2(BaseOAuth2PKCE):
     """OpenStreetMap OAuth2 authentication backend"""
 
     name = "openstreetmap-oauth2"
-    AUTHORIZATION_URL = "https://www.openstreetmap.org/oauth2/authorize"
-    ACCESS_TOKEN_URL = "https://www.openstreetmap.org/oauth2/token"
+    AUTHORIZATION_URL = "https://www.openhistoricalmap.org/oauth2/authorize"
+    ACCESS_TOKEN_URL = "https://www.openhistoricalmap.org/oauth2/token"
     ACCESS_TOKEN_METHOD = "POST"
     SCOPE_SEPARATOR = " "
     STATE_PARAMETER = True
@@ -45,7 +45,7 @@ class OpenStreetMapOAuth2(BaseOAuth2PKCE):
 
         headers = {"Authorization": f"Bearer {access_token}"}
         response = self.get_json(
-            url="https://api.openstreetmap.org/api/0.6/user/details.json",
+            url="https://api.openhistoricalmap.org/api/0.6/user/details.json",
             headers=headers,
         )
 
