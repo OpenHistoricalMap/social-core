@@ -2,6 +2,7 @@
 LoginRadius BaseOAuth2 backend, docs at:
     https://python-social-auth.readthedocs.io/en/latest/backends/loginradius.html
 """
+
 from .oauth import BaseOAuth2
 
 
@@ -36,7 +37,7 @@ class LoginRadiusAuth(BaseOAuth2):
         return self.get_json(
             params={"token": self.data.get("token"), "secret": self.setting("SECRET")},
             *args,
-            **kwargs
+            **kwargs,
         )
 
     def user_data(self, access_token, *args, **kwargs):
@@ -57,14 +58,13 @@ class LoginRadiusAuth(BaseOAuth2):
          'first_name': <user first name if any>,
          'last_name': <user last name if any>}
         """
-        profile = {
+        return {
             "username": response["NickName"] or "",
             "email": response["Email"][0]["Value"] or "",
             "fullname": response["FullName"] or "",
             "first_name": response["FirstName"] or "",
             "last_name": response["LastName"] or "",
         }
-        return profile
 
     def get_user_id(self, details, response):
         """Return a unique ID for the current user, by default from server

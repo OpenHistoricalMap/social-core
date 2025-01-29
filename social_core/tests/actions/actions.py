@@ -53,6 +53,7 @@ class BaseActionTest(unittest.TestCase):
 
     def __init__(self, *args, **kwargs):
         self.strategy = None
+        self.backend = None
         super().__init__(*args, **kwargs)
 
     def setUp(self):
@@ -63,7 +64,9 @@ class BaseActionTest(unittest.TestCase):
         TestAssociation.reset_cache()
         Backend = module_member("social_core.backends.github.GithubOAuth2")
         self.strategy = self.strategy or TestStrategy(TestStorage)
-        self.backend = Backend(self.strategy, redirect_uri="/complete/github")
+        self.backend = self.backend or Backend(
+            self.strategy, redirect_uri="/complete/github"
+        )
         self.user = None
 
     def tearDown(self):
@@ -131,6 +134,9 @@ class BaseActionTest(unittest.TestCase):
 
         def _login(backend, user, social_user):
             backend.strategy.session_set("username", user.username)
+            user_email = getattr(user, "email", None)
+            if user_email:
+                backend.strategy.session_set("email", user_email)
 
         redirect = do_complete(self.backend, user=self.user, login=_login)
 
@@ -206,6 +212,9 @@ class BaseActionTest(unittest.TestCase):
 
         def _login(backend, user, social_user):
             backend.strategy.session_set("username", user.username)
+            user_email = getattr(user, "email", None)
+            if user_email:
+                backend.strategy.session_set("email", user_email)
 
         redirect = do_complete(self.backend, user=self.user, login=_login)
         url = self.strategy.build_absolute_uri("/password")

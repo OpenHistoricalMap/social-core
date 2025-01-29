@@ -2,6 +2,7 @@
 Facebook OAuth2, and Canvas Application  backends, docs at:
     https://python-social-auth.readthedocs.io/en/latest/backends/facebook.html
 """
+
 import base64
 import hashlib
 import hmac
@@ -17,7 +18,7 @@ from ..exceptions import (
 from ..utils import constant_time_compare, handle_http_errors, parse_qs
 from .oauth import BaseOAuth2
 
-API_VERSION = 12.0
+API_VERSION = 18.0
 
 
 class FacebookOAuth2(BaseOAuth2):
@@ -145,7 +146,7 @@ class FacebookOAuth2(BaseOAuth2):
             # account on further logins), this app cannot allow it to
             # continue with the auth process.
             raise AuthUnknownError(
-                self, "An error occurred while retrieving " "users Facebook data"
+                self, "An error occurred while retrieving users Facebook data"
             )
 
         data["access_token"] = access_token
@@ -190,6 +191,7 @@ class FacebookAppOAuth2(FacebookOAuth2):
         if "signed_request" in self.data:
             key, secret = self.get_key_and_secret()
             response = self.load_signed_request(self.data["signed_request"])
+            assert response, "Missing signed_request response"
             if "user_id" not in response and "oauth_token" not in response:
                 raise AuthException(self)
 
@@ -203,8 +205,7 @@ class FacebookAppOAuth2(FacebookOAuth2):
         if access_token is None:
             if self.data.get("error") == "access_denied":
                 raise AuthCanceled(self)
-            else:
-                raise AuthException(self)
+            raise AuthException(self)
         return self.do_auth(access_token, response, *args, **kwargs)
 
     def auth_html(self):

@@ -1,10 +1,16 @@
-from urllib.parse import unquote, urlencode
+from __future__ import annotations
+
+import base64
+import hashlib
+from typing import TYPE_CHECKING, Any
+from urllib.parse import urlencode
 
 from oauthlib.oauth1 import SIGNATURE_TYPE_AUTH_HEADER
 from requests_oauthlib import OAuth1
 
 from ..exceptions import (
     AuthCanceled,
+    AuthException,
     AuthFailed,
     AuthMissingParameter,
     AuthStateForbidden,
@@ -19,6 +25,9 @@ from ..utils import (
     url_add_parameters,
 )
 from .base import BaseAuth
+
+if TYPE_CHECKING:
+    from collections.abc import Mapping, MutableMapping
 
 
 class OAuthAuth(BaseAuth):
@@ -94,12 +103,11 @@ class OAuthAuth(BaseAuth):
         request_state = self.get_request_state()
         if not request_state:
             raise AuthMissingParameter(self, "state")
-        elif not state:
+        if not state:
             raise AuthStateMissing(self, "state")
-        elif not constant_time_compare(request_state, state):
+        if not constant_time_compare(request_state, state):
             raise AuthStateForbidden(self)
-        else:
-            return state
+        return state
 
     def get_redirect_uri(self, state=None):
         """Build redirect with redirect_state parameter."""
@@ -122,23 +130,23 @@ class OAuthAuth(BaseAuth):
             param[self.SCOPE_PARAMETER_NAME] = self.SCOPE_SEPARATOR.join(scope)
         return param
 
-    def user_data(self, access_token, *args, **kwargs):
+    def user_data(self, access_token, *args, **kwargs) -> dict[str, Any] | None:
         """Loads user data from service. Implement in subclass"""
         return {}
 
-    def authorization_url(self):
+    def authorization_url(self) -> str:
         return self.AUTHORIZATION_URL
 
-    def access_token_url(self):
+    def access_token_url(self) -> str:
         return self.ACCESS_TOKEN_URL
 
-    def revoke_token_url(self, token, uid):
+    def revoke_token_url(self, token, uid) -> str | None:
         return self.REVOKE_TOKEN_URL
 
-    def revoke_token_params(self, token, uid):
+    def revoke_token_params(self, token, uid) -> dict[str, Any]:
         return {}
 
-    def revoke_token_headers(self, token, uid):
+    def revoke_token_headers(self, token, uid) -> dict[str, Any]:
         return {}
 
     def process_revoke_token_response(self, response):
@@ -158,6 +166,7 @@ class OAuthAuth(BaseAuth):
                 method=self.REVOKE_TOKEN_METHOD,
             )
             return self.process_revoke_token_response(response)
+        return None
 
 
 class BaseOAuth1(OAuthAuth):
@@ -175,7 +184,7 @@ class BaseOAuth1(OAuthAuth):
     REDIRECT_URI_PARAMETER_NAME = "redirect_uri"
     UNATHORIZED_TOKEN_SUFIX = "unauthorized_token_name"
 
-    def auth_url(self):
+    def auth_url(self) -> str | bytes | None:
         """Return redirect url"""
         token = self.set_unauthorized_token()
         return self.oauth_authorization_request(token)
@@ -236,7 +245,7 @@ class BaseOAuth1(OAuthAuth):
     def set_unauthorized_token(self):
         token = self.unauthorized_token()
         name = self.name + self.UNATHORIZED_TOKEN_SUFIX
-        tokens = self.strategy.session_get(name, []) + [token]
+        tokens = [*self.strategy.session_get(name, []), token]
         self.strategy.session_set(name, tokens)
         return token
 
@@ -274,7 +283,7 @@ class BaseOAuth1(OAuthAuth):
         )
         state = self.get_or_create_state()
         params[self.REDIRECT_URI_PARAMETER_NAME] = self.get_redirect_uri(state)
-        return f"{self.authorization_url()}?{urlencode(params)}"
+        return url_add_parameters(self.authorization_url(), params)
 
     def oauth_auth(
         self, token=None, oauth_verifier=None, signature_type=SIGNATURE_TYPE_AUTH_HEADER
@@ -331,10 +340,10 @@ class BaseOAuth2(OAuthAuth):
     STATE_PARAMETER = True
     USE_BASIC_AUTH = False
 
-    def use_basic_auth(self):
+    def use_basic_auth(self) -> bool:
         return self.USE_BASIC_AUTH
 
-    def auth_params(self, state=None):
+    def auth_params(self, state=None) -> MutableMapping[str, Any]:
         client_id, client_secret = self.get_key_and_secret()
         params = {"client_id": client_id, "redirect_uri": self.get_redirect_uri(state)}
         if self.STATE_PARAMETER and state:
@@ -343,18 +352,18 @@ class BaseOAuth2(OAuthAuth):
             params["response_type"] = self.RESPONSE_TYPE
         return params
 
-    def auth_url(self):
+    def auth_url(self) -> str | bytes | None:
         """Return redirect url"""
         state = self.get_or_create_state()
         params = self.auth_params(state)
         params.update(self.get_scope_argument())
         params.update(self.auth_extra_arguments())
-        params = urlencode(params)
-        if not self.REDIRECT_STATE:
-            # redirect_uri matching is strictly enforced, so match the
-            # providers value exactly.
-            params = unquote(params)
-        return f"{self.authorization_url()}?{params}"
+
+        # when self.REDIRECT_STATE is False, redirect_uri matching is strictly enforced,
+        # so match the providers value exactly.
+        return url_add_parameters(
+            self.authorization_url(), params, not self.REDIRECT_STATE
+        )
 
     def auth_complete_params(self, state=None):
         params = {
@@ -377,7 +386,7 @@ class BaseOAuth2(OAuthAuth):
             return self.get_key_and_secret()
         return None
 
-    def auth_headers(self):
+    def auth_headers(self) -> Mapping[str, str | bytes]:
         return {
             "Content-Type": "application/x-www-form-urlencoded",
             "Accept": "application/json",
@@ -398,7 +407,7 @@ class BaseOAuth2(OAuthAuth):
             if "denied" in data["error"] or "cancelled" in data["error"]:
                 raise AuthCanceled(self, data.get("error_description", ""))
             raise AuthFailed(self, data.get("error_description") or data["error"])
-        elif "denied" in data:
+        if "denied" in data:
             raise AuthCanceled(self, data["denied"])
 
     @handle_http_errors
@@ -459,3 +468,66 @@ class BaseOAuth2(OAuthAuth):
 
     def refresh_token_url(self):
         return self.REFRESH_TOKEN_URL or self.access_token_url()
+
+
+class BaseOAuth2PKCE(BaseOAuth2):
+    """
+    Base class for providers using OAuth2 with Proof Key for Code Exchange (PKCE).
+
+    OAuth2 details at:
+        https://datatracker.ietf.org/doc/html/rfc6749
+    PKCE details at:
+        https://datatracker.ietf.org/doc/html/rfc7636
+    """
+
+    PKCE_DEFAULT_CODE_CHALLENGE_METHOD = "s256"
+    PKCE_DEFAULT_CODE_VERIFIER_LENGTH = 32
+    DEFAULT_USE_PKCE = True
+
+    def create_code_verifier(self):
+        name = f"{self.name}_code_verifier"
+        code_verifier_len = self.setting(
+            "PKCE_CODE_VERIFIER_LENGTH", default=self.PKCE_DEFAULT_CODE_VERIFIER_LENGTH
+        )
+        code_verifier = self.strategy.random_string(code_verifier_len)
+        self.strategy.session_set(name, code_verifier)
+        return code_verifier
+
+    def get_code_verifier(self):
+        name = f"{self.name}_code_verifier"
+        return self.strategy.session_get(name)
+
+    def generate_code_challenge(self, code_verifier, challenge_method):
+        method = challenge_method.lower()
+        if method == "s256":
+            hashed = hashlib.sha256(code_verifier.encode()).digest()
+            encoded = base64.urlsafe_b64encode(hashed)
+            return encoded.decode().replace("=", "")  # remove padding
+        if method == "plain":
+            return code_verifier
+        raise AuthException("Unsupported code challenge method.")
+
+    def auth_params(self, state=None):
+        params = super().auth_params(state=state)
+
+        if self.setting("USE_PKCE", default=self.DEFAULT_USE_PKCE):
+            code_challenge_method = self.setting(
+                "PKCE_CODE_CHALLENGE_METHOD",
+                default=self.PKCE_DEFAULT_CODE_CHALLENGE_METHOD,
+            )
+            code_verifier = self.create_code_verifier()
+            code_challenge = self.generate_code_challenge(
+                code_verifier, code_challenge_method
+            )
+            params["code_challenge_method"] = code_challenge_method
+            params["code_challenge"] = code_challenge
+        return params
+
+    def auth_complete_params(self, state=None):
+        params = super().auth_complete_params(state=state)
+
+        if self.setting("USE_PKCE", default=self.DEFAULT_USE_PKCE):
+            code_verifier = self.get_code_verifier()
+            params["code_verifier"] = code_verifier
+
+        return params

@@ -1,6 +1,7 @@
 """
 Bungie OAuth2 backend
 """
+
 from social_core.backends.oauth import BaseOAuth2
 
 
@@ -22,7 +23,6 @@ class BungieOAuth2(BaseOAuth2):
 
     def auth_html(self):
         """Abstract Method Inclusion"""
-        pass
 
     def auth_headers(self):
         """Adds X-API-KEY and Origin"""

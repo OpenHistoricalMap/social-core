@@ -2,6 +2,7 @@
 Auth0 implementation based on:
 https://auth0.com/docs/quickstart/webapp/django/01-login
 """
+
 import jwt
 
 from .oauth import BaseOAuth2
@@ -60,6 +61,7 @@ class Auth0OAuth2(BaseOAuth2):
             else:
                 break
         else:
+            assert signature_error is not None
             # raise last esception found during iteration
             raise signature_error
 

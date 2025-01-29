@@ -2,13 +2,14 @@
 Okta OAuth2 and OpenIdConnect:
     https://python-social-auth.readthedocs.io/en/latest/backends/okta.html
 """
+
 from urllib.parse import urljoin
 
 from ..utils import append_slash
 from .oauth import BaseOAuth2
 
 
-class OktaMixin:
+class OktaMixin(BaseOAuth2):
     def api_url(self):
         return append_slash(self.setting("API_URL"))
 
